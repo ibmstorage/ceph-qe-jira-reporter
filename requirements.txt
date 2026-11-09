@@ -1,0 +1,6 @@
+jira
+gspread
+pyyaml
+scipy
+jinja2
+jinja-markdown
