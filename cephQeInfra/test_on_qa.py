@@ -17,7 +17,6 @@ from lib.jira_user_lookup import resolve_identifier_to_account_id
 from lib.team_members import load_qe_team_members
 from cephQeInfra.action_items_utils import (
     extract_qe_contact_users,
-    extract_target_version,
     get_field_id,
     issues_navigator_url,
 )
@@ -76,30 +75,29 @@ def _qe_contact_field_for_jql(config) -> str:
     return fid or name
 
 
-def _version_clause(jql_version_field: str, version_key: str) -> str:
-    """JQL clause matching target version OR fixVersion for a given version key."""
+def _version_clause(version_key: str) -> str:
+    """JQL clause matching only Fix Version/s for a matrix column."""
     if version_key == "Unspecified":
-        return f'"{jql_version_field}" is EMPTY'
+        return "fixVersion is EMPTY"
     v = _escape_jql_string(version_key)
-    return f'("{jql_version_field}" = "{v}" OR fixVersion = "{v}")'
+    return f'fixVersion = "{v}"'
 
 
-def _on_qa_total_row_jql(config, jql_version_field: str, version_key: str) -> str:
-    """ON_QA + target version or fixVersion (all bugs for that release)."""
+def _on_qa_total_row_jql(config, version_key: str) -> str:
+    """ON_QA + Fix Version/s (all bugs for that release)."""
     parts = list(_jql_base_on_qa_parts(config))
-    parts.append(_version_clause(jql_version_field, version_key))
+    parts.append(_version_clause(version_key))
     return _join_jql(parts)
 
 
 def _on_qa_cell_jql_qe_contact(
     config,
-    jql_version_field: str,
     version_key: str,
     qe_jql_field: str,
     qe_contact_account_id: str,
 ) -> str:
     parts = list(_jql_base_on_qa_parts(config))
-    parts.append(_version_clause(jql_version_field, version_key))
+    parts.append(_version_clause(version_key))
     parts.append(
         f'"{_escape_jql_string(qe_jql_field)}" in ("{_escape_jql_string(qe_contact_account_id)}")'
     )
@@ -107,10 +105,10 @@ def _on_qa_cell_jql_qe_contact(
 
 
 def _on_qa_cell_jql_qe_contact_empty(
-    config, jql_version_field: str, version_key: str, qe_jql_field: str
+    config, version_key: str, qe_jql_field: str
 ) -> str:
     parts = list(_jql_base_on_qa_parts(config))
-    parts.append(_version_clause(jql_version_field, version_key))
+    parts.append(_version_clause(version_key))
     parts.append(f'"{_escape_jql_string(qe_jql_field)}" is EMPTY')
     return _join_jql(parts)
 
@@ -125,7 +123,6 @@ def _build_on_qa_matrix_html(
     keys_empty_qe_contact: dict[str, list[str]],
     totals_by_version: dict[str, list[str]],
     config,
-    jql_version_field: str,
     qe_jql_field: str,
     title_issues_url: str,
 ):
@@ -138,7 +135,7 @@ def _build_on_qa_matrix_html(
     for col in columns:
         keys = totals_by_version.get(col, [])
         if keys:
-            jql = _on_qa_total_row_jql(config, jql_version_field, col)
+            jql = _on_qa_total_row_jql(config, col)
             url = issues_navigator_url(config, jql)
             total_cells.append(
                 f'<td><a href="{html.escape(url)}"{_LINK_STYLE}>{len(keys)}</a></td>'
@@ -166,7 +163,7 @@ def _build_on_qa_matrix_html(
             keys = by_ver.get(col, [])
             if keys and eff_aid:
                 jql = _on_qa_cell_jql_qe_contact(
-                    config, jql_version_field, col, qe_jql_field, eff_aid
+                    config, col, qe_jql_field, eff_aid
                 )
                 url = issues_navigator_url(config, jql)
                 row_cells.append(
@@ -185,7 +182,7 @@ def _build_on_qa_matrix_html(
             keys = keys_empty_qe_contact.get(col, [])
             if keys:
                 jql = _on_qa_cell_jql_qe_contact_empty(
-                    config, jql_version_field, col, qe_jql_field
+                    config, col, qe_jql_field
                 )
                 url = issues_navigator_url(config, jql)
                 dash_cells.append(
@@ -215,11 +212,6 @@ class TestOnQaCls:
                 raise ValueError("spreadsheet_name is required")
             config = load_config(spreadsheet_name)
         spreadsheet_name = config.spreadsheet_name
-        target_field_name = config.proposed_version_field or "Target Version"
-        target_field_id = get_field_id(config, target_field_name)
-        jql_version_field = _jql_clause_field_for_target_version(
-            config, target_field_name
-        )
         qe_jql_field = _qe_contact_field_for_jql(config)
         qe_field_name = (getattr(config, "qe_contact_field", None) or "").strip()
         qe_field_name = qe_field_name or "QE Contact"
@@ -253,30 +245,32 @@ class TestOnQaCls:
 
         for issue in issues:
             key = issue.key
-            target_release = extract_target_version(
-                issue, target_field_name, target_field_id
-            )
-            if not target_release:
-                # Fall back to fixVersion if target version is not set
-                fix_versions = getattr(issue.fields, "fixVersions", []) or []
-                fix_version_names = [v.name for v in fix_versions if getattr(v, "name", "")]
-                target_release = ", ".join(fix_version_names) if fix_version_names else "Unspecified"
+            fix_versions = getattr(issue.fields, "fixVersions", []) or []
+            releases = list(
+                dict.fromkeys(
+                    v.name for v in fix_versions if getattr(v, "name", "")
+                )
+            ) or ["Unspecified"]
 
-            totals_by_version[target_release].append(key)
+            for release in releases:
+                totals_by_version[release].append(key)
 
             qe_users = extract_qe_contact_users(issue, qe_field_id)
             if not qe_users:
-                keys_empty_qe_contact[target_release].append(key)
+                for release in releases:
+                    keys_empty_qe_contact[release].append(key)
                 continue
 
             # One matrix row per bug: first QE Contact user who matches the QE sheet.
             for aid, dn in qe_users:
                 if aid and aid in qe_account_ids:
-                    keys_by_account[aid][target_release].append(key)
+                    for release in releases:
+                        keys_by_account[aid][release].append(key)
                     break
                 dnl = (dn or "").strip().lower()
                 if dnl and dnl in qe_label_lowers:
-                    keys_by_display_lower[dnl][target_release].append(key)
+                    for release in releases:
+                        keys_by_display_lower[dnl][release].append(key)
                     if aid:
                         display_to_account.setdefault(dnl, aid)
                     break
@@ -285,7 +279,7 @@ class TestOnQaCls:
         # Version columns: only releases that have at least one bug (no all-empty columns).
         all_versions = set(totals_by_version.keys())
         rest = sorted(v for v in all_versions if v != "Unspecified")
-        columns = rest + (["Unspecified"] if "Unspecified" in all_versions else []) 
+        columns = rest + (["Unspecified"] if "Unspecified" in all_versions else [])
 
         on_qa_title_url = issues_navigator_url(
             config, jql_test_on_qa_matrix_bugs(config)
@@ -301,7 +295,6 @@ class TestOnQaCls:
             dict(keys_empty_qe_contact),
             dict(totals_by_version),
             config,
-            jql_version_field,
             qe_jql_field,
             on_qa_title_url,
         )

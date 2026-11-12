@@ -48,7 +48,7 @@ class JiraConfig:
     rbd_labels: list
     openstack_components: list
     openstack_labels: list
-    # On QA matrix: group by QE Contact (user picker); JQL override for Cloud navigator
+    # QE Contact user picker; target-version JQL override for reports that still use it
     qe_contact_field: str
     qe_contact_jql_field: str
 

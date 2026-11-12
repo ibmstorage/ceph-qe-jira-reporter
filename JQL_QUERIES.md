@@ -239,12 +239,12 @@ Aligned with Bugzilla PQI: both dev and QE backlog are filtered by **Target Vers
   - `component = "documentation"`
   - `status = "ON_QA"`
 
-- **Test On QA** (Action Items matrix: all releases as columns)
+- **Test On QA** (Action Items matrix: Fix Version/s as columns)
   - `project = "IBMCEPH"`
   - `issuetype = Bug`
   - `component not in ("documentation", "Jira_Change_Requests", "Jira_Issues")` *(per config)*
   - `status = "ON_QA"`
-  - *(No `Target Version` clause — bugs for every targeted release are grouped in the table.)*
+  - *(No `Target Version` clause — bugs are grouped only by `Fix Version/s`; bugs without one appear under `Unspecified`.)*
 
 - **Unspecified Severity**
   - `project = "IBMCEPH"`

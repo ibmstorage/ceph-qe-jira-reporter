@@ -859,7 +859,7 @@ def get_doc_on_qa_bugs(config: JiraConfig):
 
 
 def jql_test_on_qa_matrix_bugs(config: JiraConfig) -> str:
-    """All ON_QA bugs for the Test on QA matrix (any target version; grouped by QE Contact in mail)."""
+    """All ON_QA bugs for the Test on QA matrix (grouped by QE Contact and Fix Version/s)."""
     return _join_clauses(
         [
             f'project = "{config.jira_project}"',
@@ -871,7 +871,7 @@ def jql_test_on_qa_matrix_bugs(config: JiraConfig) -> str:
 
 
 def get_test_on_qa_bugs(config: JiraConfig):
-    """All bugs in QE testing status (any target version). Action Items matrix groups by QE Contact × release."""
+    """All bugs in QE testing status. Action Items groups by QE Contact × Fix Version/s."""
     from cephQeInfra.action_items_utils import get_field_id
 
     query = jql_test_on_qa_matrix_bugs(config)
