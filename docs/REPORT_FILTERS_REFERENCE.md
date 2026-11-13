@@ -263,7 +263,7 @@ See sections 4.11–4.17 for each subsection’s filters.
 
 - **Functions used:** `get_test_on_qa_bugs`.
 - **JQL / filters:**  
-  project, exclude components, `status = qe_status` — **no** dashboard target-version filter (all releases appear as matrix columns). Fetched with `fields=["assignee"]`. Mail HTML is a **Contact Person × Target Version** grid (QE team sheet order), **Total** row, counts as links to Issue Navigator; `--` when zero.
+  project, exclude components, `status = qe_status` — **no** Target Version filter. Fetched with the QE Contact field and `fixVersions`. Mail HTML is a **Contact Person × Fix Version/s** grid (QE team sheet order), **Total** row, counts as links to Issue Navigator; bugs without a Fix Version appear under **Unspecified** and `--` is shown when zero.
 
 ---
 

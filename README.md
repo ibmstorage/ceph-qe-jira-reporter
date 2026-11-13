@@ -78,7 +78,7 @@ If a sheet cell is empty, the corresponding env (when documented) or a default i
 - `JIRA_NEEDINFO_SHEET_NAME` (default: `Need Info`)
 - `JIRA_DOC_ON_QA_SHEET_NAME` (default: `DocBugs`)
 - `JIRA_QE_TEAM_SHEET` (default: `QE Team Member` or `QE_team_member`)
-- `JIRA_JQL_TARGET_VERSION_FIELD` (optional; **On QA list** mail links only) — exact field token for JQL when `customfield_…` fails in Issue Navigator. If unset and the proposed-version field is **Target Version**, links use `Target Version[Version Picker (multiple versions)]`. Otherwise the proposed field name from the sheet is used. Example override: `Target Version[Version Picker (multiple versions)]`
+- `JIRA_JQL_TARGET_VERSION_FIELD` (optional; **Unassigned QE Contact** target-version link/filter only) — exact field token for JQL when `customfield_…` fails in Issue Navigator. The **On QA list of bugs** uses only `fixVersion` and does not use this setting.
 - `JIRA_RELEASE_READINESS_FAST` (default: unset)
 - `JIRA_METADATA_PATH` (default: `./metadata.json`)
 - `JIRA_SKIP_METADATA_VALIDATION` (default: unset)
